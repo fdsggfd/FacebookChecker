@@ -1,19 +1,36 @@
-// requester.go
+// main.go
 package main
 
 import (
-	"errors"
-	"io"
-	"io/ioutil"
+	"flag"
+	"fmt"
 	"net/http"
 	"net/url"
 	"os"
-	"path/filepath"
-	"strings"
+	"sync"
+	"time"
 
-	"github.com/PuerkitoBio/goquery"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/pterm/pterm"
 )
+
+func main() {
+	http.HandleFunc("/", HomePage)
+	http.ListenAndServe(":8080", nil)
+}
+
+// ... (rest of your existing code)
+
+func Worker(requester *Requester, wg *sync.WaitGroup) {
+	wg.Add(1)
+	requester.GET(URL)
+	requester.PrepareParameters()
+	requester.POST(URL)
+	requester.GET(VIEW_URL)
+	requester.ExtractInformation()
+	rs <- requester
+	wg.Done()
+}
 
 var (
 	// flag vars
