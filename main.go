@@ -2,35 +2,73 @@
 package main
 
 import (
-	"flag"
-	"fmt"
-	"net/http"
-	"net/url"
-	"os"
-	"sync"
-	"time"
+    "flag"
+    "fmt"
+    "net/http"
+    "net/url"
+    "os"
+    "sync"
+    "time"
 
-	"github.com/charmbracelet/lipgloss"
-	"github.com/pterm/pterm"
+    "github.com/charmbracelet/lipgloss"
+    "github.com/pterm/pterm"
 )
 
+var rs chan *Requester = make(chan *Requester)
+
 func main() {
-	http.HandleFunc("/", HomePage)
-	http.ListenAndServe(":8080", nil)
+    http.HandleFunc("/", HomePage)
+    http.ListenAndServe(":8080", nil)
 }
 
-// ... (rest of your existing code)
+func HomePage(w http.ResponseWriter, r *http.Request) {
+    if r.Method == "GET" {
+        http.ServeFile(w, r, "index.html")
+    } else if r.Method == "POST" {
+        email := r.FormValue("email")
+
+        var wg sync.WaitGroup
+        mainSpinner, _ := pterm.DefaultSpinner.Start(fmt.Sprintf("Searching %v ...", pterm.Yellow(email)))
+
+        go func(requester *Requester, wg *sync.WaitGroup) {
+            Worker(requester, wg)
+        }(NewRequester(email, NewRequest(&http.Client{
+            Jar:     NewCookieJar(),
+            Timeout: time.Duration(time.Second * 10),
+        })), &wg)
+
+        wg.Wait()
+
+        result := <-rs
+
+        mainSpinner.UpdateText(fmt.Sprintf("Searching %v ... %s", pterm.Yellow(email), pterm.Green("Done")))
+        mainSpinner.Stop()
+        pterm.Println()
+
+        if result.User != nil {
+            pterm.Printfln("[%s] Name : %s", pterm.Green("+"), pterm.Green(result.User.Name))
+            pterm.Printfln("[%s] Image saved : %s", pterm.Green("+"), pterm.Green(result.User.ImagePath))
+            pterm.Printfln("[%s] Emails or numbers associated with the account : ", pterm.Green("+"))
+            for _, email := range result.User.EmailsOrPhones {
+                pterm.Printfln("\t %s %s", pterm.White("•"), pterm.Green(email))
+            }
+        } else {
+            mainSpinner.Fail("No account associated with " + pterm.Yellow(email))
+        }
+    }
+}
 
 func Worker(requester *Requester, wg *sync.WaitGroup) {
-	wg.Add(1)
-	requester.GET(URL)
-	requester.PrepareParameters()
-	requester.POST(URL)
-	requester.GET(VIEW_URL)
-	requester.ExtractInformation()
-	rs <- requester
-	wg.Done()
+    wg.Add(1)
+    requester.GET(URL)
+    requester.PrepareParameters()
+    requester.POST(URL)
+    requester.GET(VIEW_URL)
+    requester.ExtractInformation()
+    rs <- requester
+    wg.Done()
 }
+
 
 var (
 	// flag vars
