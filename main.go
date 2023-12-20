@@ -13,6 +13,10 @@ import (
 	"github.com/pterm/pterm"
 )
 
+func main() {
+	http.HandleFunc("/", HomePage)
+	http.ListenAndServe(":8080", nil)
+}
 var (
 	// flag vars
 	Input string
