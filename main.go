@@ -1,22 +1,20 @@
+// requester.go
 package main
 
 import (
-	"flag"
-	"fmt"
+	"errors"
+	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
-	"sync"
-	"time"
+	"path/filepath"
+	"strings"
 
-	"github.com/charmbracelet/lipgloss"
+	"github.com/PuerkitoBio/goquery"
 	"github.com/pterm/pterm"
 )
 
-func main() {
-	http.HandleFunc("/", HomePage)
-	http.ListenAndServe(":8080", nil)
-}
 var (
 	// flag vars
 	Input string
