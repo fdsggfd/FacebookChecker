@@ -1,3 +1,4 @@
+// requester.go
 package main
 
 import (
@@ -13,6 +14,7 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	"github.com/pterm/pterm"
 )
+
 
 const (
 	RESULT_DIR = "results"
